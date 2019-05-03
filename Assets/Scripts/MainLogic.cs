@@ -90,7 +90,7 @@ public class MainLogic : MonoBehaviour {
     // Use this for initialization
     void Start()
     {
-        attemptText.text = "";
+        attemptText.text = "" + currValue;
 
         numberButtonList.Add(NumberButton1);
         numberButtonList.Add(NumberButton2);
@@ -143,9 +143,16 @@ public class MainLogic : MonoBehaviour {
 
         score += lvl * 100;
         score -= countDown;
+
+        //reset
+        countDown = 0;
+
         scoreUI.GetComponentInChildren<Text>().text = "Score: " + score;
+        currValue = 0;
+        numToOperate = 0;
+
         Play();
-        attemptText.text = "";
+        attemptText.text = "" + 0;
     }
     IEnumerator finalWinState()
     {
@@ -169,10 +176,10 @@ public class MainLogic : MonoBehaviour {
     }
     public void Skip()
     {
-        score -= 150;
+        score -= lvl*10;
         scoreUI.GetComponentInChildren<Text>().text = "Score: " + score;
         Play();
-        attemptText.text = "";
+        attemptText.text = "" + 0;
     }
     public void Play()
     {
@@ -185,6 +192,7 @@ public class MainLogic : MonoBehaviour {
         initValue = Random.Range(1, 11);
         currValue = initValue;
         options.Add(initValue);
+
         //list of n operators used on initial value to get answer
         operatorList = new int[lvl];
         while (answer > 10000 || answer<-10000 || answer == 0)
@@ -322,7 +330,7 @@ public class MainLogic : MonoBehaviour {
         }
         countDown = 0;
         timerText.text = ":" + countDown; //reset timer
-        attemptText.text = "";
+        attemptText.text = "" + 0;
 
         score = 0;
         scoreUI.GetComponentInChildren<Text>().text = "Score: " + score; //reset score
