@@ -294,6 +294,8 @@ public class MainLogic : MonoBehaviour {
             PlayerPrefs.SetInt("HighScore", score);
         }
 
+        highscore = PlayerPrefs.GetInt("HighScore");
+        HighScoreText.text = "High Score: " + highscore;
         MenuBoardUI.SetActive(true);
     }
     public void Tutorial()
@@ -312,6 +314,7 @@ public class MainLogic : MonoBehaviour {
             finalWinBoardUI.SetActive(false);
         }
 
+        HighScoreText.text = "High Score: " + highscore;
         score = 0;
         scoreUI.GetComponentInChildren<Text>().text = "Score: " + score; //reset score
 
