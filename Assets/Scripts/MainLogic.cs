@@ -43,7 +43,7 @@ public class MainLogic : MonoBehaviour {
     public Text timerText;
     public Text finalWinText;
 
-    private ArrayList options = new ArrayList();
+    private Hashtable numOptions = new Hashtable();
 
     //Button values
     private int numberButton1Value;
@@ -69,20 +69,21 @@ public class MainLogic : MonoBehaviour {
     private bool lvl5 = false;
     private bool lvl6 = false;
     private bool lvl7 = false;
-    private int countDown = 0;
+    private int countUp = 0;
     private int score = 0;
+    private int highscore = 0;
 
     //primitive values use for basic calculation
-    private int numToOperate;
+    private int numToOperate;   //# in the attempt box
     private bool hasOperator;
     private int operatorToUse;
-    private int[] operatorList;
+    private Hashtable operatorList = new Hashtable();
 
     //numbers used in algorithim 
-    private int currValue;
-    private int initValue;
-    private int answer;
-    private int holder;
+    private int init = 0;
+    private int currValue = 0;  //current value in algorithm
+    private int answer = 0;
+    private int holder = 0;
 
     private int pseudoLvl = 1;
     private int lvl = 1; //max 7
@@ -90,8 +91,6 @@ public class MainLogic : MonoBehaviour {
     // Use this for initialization
     void Start()
     {
-        attemptText.text = "" + currValue;
-
         numberButtonList.Add(NumberButton1);
         numberButtonList.Add(NumberButton2);
         numberButtonList.Add(NumberButton3);
@@ -109,24 +108,21 @@ public class MainLogic : MonoBehaviour {
         StartCoroutine(timer());
         //reset memory of high score
         //PlayerPrefs.SetInt("HighScore", 0);
-    }
-	// Update is called once per frame
-	void Update () {
-        if (MenuBoardUI.activeInHierarchy)
+
+        if (PlayerPrefs.HasKey("HighScore"))
         {
-            if (PlayerPrefs.HasKey("HighScore"))
-            {
-                HighScoreText.text = "High Score: " + PlayerPrefs.GetInt("HighScore");
-            }
+            highscore = PlayerPrefs.GetInt("HighScore");
         }
+        HighScoreText.text = "High Score: " + highscore;
     }
+
     public IEnumerator timer()
     {
         while (true)
         {
             yield return new WaitForSeconds(1);
-            countDown++;
-            timerText.text = ":" + countDown;
+            countUp++;
+            timerText.text = ":" + countUp;
         }
     }
     IEnumerator winState()
@@ -142,17 +138,13 @@ public class MainLogic : MonoBehaviour {
         PuzzleBoardUI.SetActive(true);
 
         score += lvl * 100;
-        score -= countDown;
-
-        //reset
-        countDown = 0;
+        score += Mathf.Max(30 - countUp, 0) * lvl * 10;
 
         scoreUI.GetComponentInChildren<Text>().text = "Score: " + score;
         currValue = 0;
         numToOperate = 0;
 
         Play();
-        attemptText.text = "" + 0;
     }
     IEnumerator finalWinState()
     {
@@ -160,6 +152,7 @@ public class MainLogic : MonoBehaviour {
 
         PuzzleBoardUI.SetActive(false);
         finalWinBoardUI.SetActive(true);
+
         winBoardScore.GetComponentInChildren<Text>().text = "Score: " + score;
         if (PlayerPrefs.HasKey("HighScore"))
         {
@@ -176,74 +169,64 @@ public class MainLogic : MonoBehaviour {
     }
     public void Skip()
     {
-        score -= lvl*10;
         scoreUI.GetComponentInChildren<Text>().text = "Score: " + score;
         Play();
-        attemptText.text = "" + 0;
+    }
+
+    public void updateAttempt()
+    {
+        attemptText.text = "" + answer;
     }
     public void Play()
     {
-        countDown = 0;
-        options.Clear(); //resets number list
+        currValue = 0;
+        answer = 0;
+        countUp = 0;
+        numOptions.Clear(); //resets number list
+        updateAttempt();
+       
+        //initial value is random number between 0-10
+        currValue = Random.Range(1, 11);
+        init = currValue;
+        numOptions[currValue] = 1;
 
-        answer = 10001; //resets answer
-
-       //initial value is random number between 0-10
-        initValue = Random.Range(1, 11);
-        currValue = initValue;
-        options.Add(initValue);
-
-        //list of n operators used on initial value to get answer
-        operatorList = new int[lvl];
-        while (answer > 10000 || answer<-10000 || answer == 0)
+        for (int i = 0; i < lvl; i++)
         {
-            for (int i = 0; i < lvl; i++)
+            if(currValue > 100)
             {
                 operatorList[i] = Random.Range(0, 4);
             }
-
-            //for loop that does the random order of operations to initial value
-            //& adds values to number list
-            for (int k = 0; k < operatorList.Length; k++)
+            else
             {
-                //random num for -, +, x operation
-                holder = Random.Range(1, 11);
-
-                //adds value to Number List
-                if (!options.Contains(holder) && operatorList[k] != 3 && holder != initValue)
-                {
-                    options.Add(holder);
-                }
-
-                if (operatorList[k] == 0)
-                {
-                    currValue = Add(currValue, holder);
-                }
-                else if (operatorList[k] == 1)
-                {
-                    currValue = Subtract(currValue, holder);
-                }
-                else if (operatorList[k] == 2)
-                {
-                    currValue = Multiply(currValue, holder);
-                }
-                else if (operatorList[k] == 3)
-                {
-                    currValue = Square(currValue);
-                }
-                if (k == operatorList.Length - 1)
-                {
-                    answer = currValue;
-                    answerText.text = "" + answer;
-                }
+                operatorList[i] = Random.Range(0, 3);
             }
-            if (answer < 10000 && answer > -10000 && answer != 0)
+
+            //random num for -, +, x operation
+            holder = Random.Range(1, 11);
+
+            //adds value to Number List
+            numOptions[holder] = 1; //filled
+
+            if ((int)operatorList[i] == 0)
             {
-                break;
+                currValue = Add(currValue, holder);
+            }
+            else if ((int)operatorList[i] == 1)
+            {
+                currValue = Subtract(currValue, holder);
+            }
+            else if ((int)operatorList[i] == 2)
+            {
+                currValue = Multiply(currValue, holder);
+            }
+            else if ((int)operatorList[i] == 3)
+            {
+                currValue = Square(currValue);
             }
         }
-        fixOperatorButtonDisplay(operatorList); //fixes display of operator buttons
-        fixNumberListButtonDisplay(); //fixes display of number list buttons.
+
+        answer = currValue;
+        answerText.text = "" + answer;
 
         //precise if/else for lvl control
         
@@ -283,9 +266,9 @@ public class MainLogic : MonoBehaviour {
             StartCoroutine(finalWinState());
         }
 
-
+        fixOperatorButtonDisplay(); //fixes display of operator buttons
+        fixNumberListButtonDisplay(); //fixes display of number list buttons.
         pseudoLvl++;
-
     }
     public void Back()
     {
@@ -295,7 +278,7 @@ public class MainLogic : MonoBehaviour {
         }
         else if (PuzzleBoardUI.activeInHierarchy)
         {
-            options.Clear();
+            numOptions.Clear();
             fixNumberListButtonDisplay();
             PuzzleBoardUI.SetActive(false);
         }
@@ -328,9 +311,6 @@ public class MainLogic : MonoBehaviour {
         {
             finalWinBoardUI.SetActive(false);
         }
-        countDown = 0;
-        timerText.text = ":" + countDown; //reset timer
-        attemptText.text = "" + 0;
 
         score = 0;
         scoreUI.GetComponentInChildren<Text>().text = "Score: " + score; //reset score
@@ -354,23 +334,24 @@ public class MainLogic : MonoBehaviour {
         numToOperate = 0;
         attemptText.text = "" + numToOperate;
     }
-    private void fixOperatorButtonDisplay(int[] operatorList)
+    private void fixOperatorButtonDisplay()
     {
-        for(int i=0; i<operatorList.Length; i++)
+
+        foreach(var key in operatorList.Keys)
         {
-            if (operatorList[i] == 0)
+            if ((int)key == 0)
             {
                 addButton.SetActive(true);
             }
-            else if(operatorList[i] == 1)
+            else if((int)key == 1)
             {
                 subtractButton.SetActive(true);
             }
-            else if (operatorList[i] == 2)
+            else if ((int)key == 2)
             {
                 multiplyButton.SetActive(true);
             }
-            else if (operatorList[i] == 3)
+            else if ((int)key == 3)
             {
                 squareButton.SetActive(true);
             }
@@ -690,91 +671,92 @@ public class MainLogic : MonoBehaviour {
                 obj.SetActive(false);
             }
         }
+
         if (!NumberButton1.activeInHierarchy)
         {
             NumberButton1.SetActive(true);
-            numberButton1Value = initValue;
-            NumberButton1.GetComponentInChildren<Text>().text = "" + initValue;
-            options.Remove(initValue);
+            numberButton1Value = init;
+            NumberButton1.GetComponentInChildren<Text>().text = "" + init;
+            numOptions.Remove(init);
         }
-        foreach (int num in options)
+        foreach (var num in numOptions.Keys)
         {
             if (!NumberButton2.activeInHierarchy)
             {
                 NumberButton2.SetActive(true);
-                numberButton2Value = num;
+                numberButton2Value = (int)num;
                 NumberButton2.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton3.activeInHierarchy)
             {
                 NumberButton3.SetActive(true);
-                numberButton3Value = num;
+                numberButton3Value = (int)num;
                 NumberButton3.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton4.activeInHierarchy)
             {
                 NumberButton4.SetActive(true);
-                numberButton4Value = num;
+                numberButton4Value = (int)num;
                 NumberButton4.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton5.activeInHierarchy)
             {
                 NumberButton5.SetActive(true);
-                numberButton5Value = num;
+                numberButton5Value = (int)num;
                 NumberButton5.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton6.activeInHierarchy)
             {
                 NumberButton6.SetActive(true);
-                numberButton6Value = num;
+                numberButton6Value = (int)num;
                 NumberButton6.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton7.activeInHierarchy)
             {
                 NumberButton7.SetActive(true);
-                numberButton7Value = num;
+                numberButton7Value = (int)num;
                 NumberButton7.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton8.activeInHierarchy)
             {
                 NumberButton8.SetActive(true);
-                numberButton8Value = num;
+                numberButton8Value = (int)num;
                 NumberButton8.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton9.activeInHierarchy)
             {
                 NumberButton9.SetActive(true);
-                numberButton9Value = num;
+                numberButton9Value = (int)num;
                 NumberButton9.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton10.activeInHierarchy)
             {
                 NumberButton10.SetActive(true);
-                numberButton10Value = num;
+                numberButton10Value = (int)num;
                 NumberButton10.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton11.activeInHierarchy)
             {
                 NumberButton11.SetActive(true);
-                numberButton11Value = num;
+                numberButton11Value = (int)num;
                 NumberButton11.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton12.activeInHierarchy)
             {
                 NumberButton12.SetActive(true);
-                numberButton12Value = num;
+                numberButton12Value = (int)num;
                 NumberButton12.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton13.activeInHierarchy)
             {
                 NumberButton13.SetActive(true);
-                numberButton13Value = num;
+                numberButton13Value = (int)num;
                 NumberButton13.GetComponentInChildren<Text>().text = "" + num;
             }
             else if (!NumberButton14.activeInHierarchy)
             {
                 NumberButton14.SetActive(true);
-                numberButton14Value = num;
+                numberButton14Value = (int)num;
                 NumberButton14.GetComponentInChildren<Text>().text = "" + num;
             }
         }
